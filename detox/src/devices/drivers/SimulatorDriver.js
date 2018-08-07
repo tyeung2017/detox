@@ -7,6 +7,8 @@ const AppleSimUtils = require('../ios/AppleSimUtils');
 const configuration = require('../../configuration');
 const environment = require('../../utils/environment');
 const DeviceRegistry = require('../DeviceRegistry');
+const DetoxRuntimeError = require('../../errors/DetoxRuntimeError');
+const log = require('../../utils/logger').child({ __filename });
 
 const SimulatorLogPlugin = require('../../artifacts/log/ios/SimulatorLogPlugin');
 const SimulatorScreenshotPlugin = require('../../artifacts/screenshot/SimulatorScreenshotPlugin');
@@ -16,12 +18,35 @@ class SimulatorDriver extends IosDriver {
 
   constructor(config) {
     super(config);
-
     this._applesimutils = new AppleSimUtils();
+
     this.deviceRegistry = new DeviceRegistry({
-      getDeviceIdsByType: async type => await this._applesimutils.findDevicesUDID(type),
-      createDevice: type => this._applesimutils.create(type),
+      createDeviceWithProperties: this._createDeviceWithProperties.bind(this),
+      getDevicesWithProperties: this._getDevicesWithProperties.bind(this),
     });
+  }
+
+  async _createDeviceWithProperties(properties) {
+    const device = await this._applesimutils.getDevicesWithProperties(properties);
+    return SimulatorDriver.remapSimUtilsObject(device);
+  }
+
+  async _getDevicesWithProperties(properties) {
+    const devices = await this._applesimutils.getDevicesWithProperties(properties);
+    return devices.map(SimulatorDriver.remapSimUtilsObject);
+  }
+
+  async _createDeviceWithProperties(properties) {
+    const devices = await this._applesimutils.getDevicesWithProperties(properties);
+    return devices.map(SimulatorDriver.remapSimUtilsObject);
+  }
+
+  static remapSimUtilsObject(device) {
+    return _.mapKeys(device, SimulatorDriver.renameUDID);
+  }
+
+  static renameUDID(_value, key) {
+    return key === 'udid' ? 'id' : key;
   }
 
   declareArtifactPlugins() {
@@ -38,8 +63,10 @@ class SimulatorDriver extends IosDriver {
     const detoxFrameworkPath = await environment.getFrameworkPath();
 
     if (!fs.existsSync(detoxFrameworkPath)) {
-      throw new Error(`${detoxFrameworkPath} could not be found, this means either you changed a version of Xcode or Detox postinstall script was unsuccessful.
-      To attempt a fix try running 'detox clean-framework-cache && detox build-framework-cache'`);
+      throw new DetoxRuntimeError({
+        message: `${detoxFrameworkPath} could not be found, this means either you changed a version of Xcode or Detox postinstall script was unsuccessful.`,
+        hint: `To attempt a fix try running 'detox clean-framework-cache && detox build-framework-cache'`,
+      });
     }
   }
 
@@ -49,12 +76,14 @@ class SimulatorDriver extends IosDriver {
   }
 
   async acquireFreeDevice(name) {
-    const deviceId = await this.deviceRegistry.getDevice(name);
+    const deviceId = await this.deviceRegistry.acquireDevice(name);
+
     if (deviceId) {
       await this.boot(deviceId);
     } else {
-      console.error('Unable to acquire free device ', name);
+      log.error({ event: 'ACQUIRE_DEVICE_ERROR' }, `Unable to acquire free device: ${name}`);
     }
+
     return deviceId;
   }
 

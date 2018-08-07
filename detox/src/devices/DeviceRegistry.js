@@ -1,89 +1,92 @@
-const fs = require('fs-extra');
-const plockfile = require('proper-lockfile');
-const _ = require('lodash');
-const retry = require('../utils/retry');
-const environment = require('../utils/environment');
-const DEVICE_LOCK_FILE_PATH = environment.getDeviceLockFilePath();
-
-const LOCK_RETRY_OPTIONS = {retries: 10000, interval: 5};
+const { omit } = require('lodash');
+const { ensureSuffix } = require('../utils/string');
+const log = require('../utils/logger').child({ __filename });
+const DeviceRegistryLock = require('./DeviceRegistryLock');
 
 class DeviceRegistry {
+  constructor({
+    createDeviceWithProperties,
+    getDevicesWithProperties,
+  }) {
+    this._createDeviceWithProperties = createDeviceWithProperties;
+    this._getDevicesWithProperties = getDevicesWithProperties;
+    this._deviceRegistryLock = new DeviceRegistryLock();
+  }
 
-  constructor({getDeviceIdsByType, createDevice}) {
-    this.getDeviceIdsByType = getDeviceIdsByType;
-    this.createDevice = createDevice;
-    this._createEmptyLockFileIfNeeded();
+  async acquireDevice(deviceName) {
+    await this._deviceRegistryLock.lock();
+
+    const exactMatch = await this._findExactDevice({ name: deviceName });
+    const similarMatch = exactMatch.available ? exactMatch : await this._findSimilarDevice(exactMatch.any);
+    const device = similarMatch.available || await this._createSimilarDevice(exactMatch.any);
+
+    this._deviceRegistryLock.busyDevices.add(device.id);
+    await this._deviceRegistryLock.unlock();
+
+    return device.id;
   }
 
   async freeDevice(deviceId) {
-    await this._lock();
-    const lockedDevices = this._getBusyDevices();
-    _.remove(lockedDevices, lockedDeviceId => lockedDeviceId === deviceId);
-    this._writeBusyDevicesToLockFile(lockedDevices);
-    await this._unlock();
+    await this._deviceRegistryLock.lock();
+    this._deviceRegistryLock.busyDevices.remove(deviceId);
+    await this._deviceRegistryLock.unlock();
   }
 
-  async getDevice(deviceType) {
-    await this._lock();
+  async _findExactDevice(searchQuery) {
+    const match = await this._findDeviceByQuery(searchQuery);
 
-    let deviceId = await this._getFreeDevice(deviceType);
-    if (!deviceId) {
-      deviceId = await this.createDevice(deviceType);
+    if (match.available) {
+      const { name, id } = match.available;
+      log.trace({ event: 'EXACT_DEVICE_ACQUIRED' }, `device with name="${name}" and id="${id}" is acquired.`);
     }
 
-    const busyDevices = this._getBusyDevices();
-    busyDevices.push(deviceId);
-    this._writeBusyDevicesToLockFile(busyDevices);
-    await this._unlock();
-    return deviceId;
+    return match;
   }
 
-  async _lock() {
-    await retry(LOCK_RETRY_OPTIONS, () => plockfile.lockSync(DEVICE_LOCK_FILE_PATH));
-  }
+  async _findSimilarDevice(deviceProperties) {
+    const nonSpecificPropertiesOfDevice = omit(deviceProperties, ['id', 'name']);
+    const match = await this._findDeviceByQuery(nonSpecificPropertiesOfDevice);
 
-  async _unlock() {
-    await plockfile.unlockSync(DEVICE_LOCK_FILE_PATH);
-  }
-
-  clear() {
-    this._writeBusyDevicesToLockFile([]);
-  }
-
-  async isBusy(deviceId) {
-    await this._lock();
-    const isBusy = this._getBusyDevices().includes(deviceId);
-
-    await this._unlock();
-    return isBusy;
-  }
-
-  _createEmptyLockFileIfNeeded() {
-    if (!fs.existsSync(DEVICE_LOCK_FILE_PATH)) {
-      fs.ensureFileSync(DEVICE_LOCK_FILE_PATH);
-      this._writeBusyDevicesToLockFile([]);
+    if (match.available) {
+      const { id } = match.available;
+      const { name } = deviceProperties;
+      log.trace({ event: 'SIMILAR_DEVICE_ACQUIRED' }, `similar device to "${name}" with id="${id}" is acquired.`);
     }
+
+    return match;
   }
 
-  _writeBusyDevicesToLockFile(lockedDevices) {
-    fs.writeFileSync(DEVICE_LOCK_FILE_PATH, JSON.stringify(lockedDevices));
+  async _createSimilarDevice(deviceProperties) {
+    const deviceName = deviceProperties.name;
+    const newDeviceProperties = {
+      ...omit(deviceProperties, ['id']),
+      name: ensureSuffix(deviceName, '-Detox')
+    };
+
+    log.debug({ event: 'CREATING_SIMILAR_DEVICE' },
+      `creating device similar to ${deviceName} with properties:`, newDeviceProperties);
+
+    const newUDID = await this._createDeviceWithProperties(newDeviceProperties);
+
+    return {
+      ...newDeviceProperties,
+      id: newUDID
+    };
   }
 
-  _getBusyDevices() {
-    this._createEmptyLockFileIfNeeded();
-    const lockFileContent = fs.readFileSync(DEVICE_LOCK_FILE_PATH, 'utf-8');
-    return JSON.parse(lockFileContent);
+  async _findDeviceByQuery(searchQuery) {
+    const foundDevices = await this._getDevicesWithProperties(searchQuery);
+
+    return {
+      available: foundDevices.find(this._isDeviceAvailable, this),
+      any: foundDevices[0]
+    };
   }
 
-  async _getFreeDevice(deviceType) {
-    const deviceIds = await this.getDeviceIdsByType(deviceType);
+  _isDeviceAvailable(deviceId) {
+    const busy = this._deviceRegistryLock.busyDevices.has(deviceId);
 
-    for (let i = 0; i < deviceIds.length; i++) {
-      let deviceId = deviceIds[i];
-      if (!this._getBusyDevices().includes(deviceId)) {
-        return deviceId;
-      }
-    }
+    return !busy;
   }
 }
 
