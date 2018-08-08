@@ -1,3 +1,0 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
-
-exports[`DeviceRegistry acquireDevice should throw if device with given name is not found 1`] = `"Cannot read property 'name' of undefined"`;

@@ -4,7 +4,7 @@ exports[`SimulatorDriver should log error to log if cannot acquire free device f
 Array [
   Array [
     Object {
-      "event": "ACQUIRE_DEVICE_ERROR ",
+      "event": "ACQUIRE_DEVICE_ERROR",
     },
     "Unable to acquire free device: test string",
   ],

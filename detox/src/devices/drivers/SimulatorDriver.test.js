@@ -1,4 +1,4 @@
-jest.mock('../DeviceRegistry');
+jest.mock('../registries/SimulatorDeviceRegistry');
 jest.mock('../../utils/logger');
 jest.mock('../../utils/environment', () => ({
   getFrameworkPath: () => '',

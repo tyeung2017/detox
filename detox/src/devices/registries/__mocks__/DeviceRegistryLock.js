@@ -2,6 +2,9 @@ class DeviceRegistryLock {
   constructor() {
     this._busyDevices = null;
     this._fileContents = [];
+
+    this.lock = jest.fn().mockImplementation(this.lock.bind(this));
+    this.unlock = jest.fn().mockImplementation(this.unlock.bind(this));
   }
 
   get busyDevices() {
@@ -17,8 +20,10 @@ class DeviceRegistryLock {
   }
 
   async unlock() {
-    this._fileContents = [...this._busyDevices.values()];
-    this._busyDevices = null;
+    if (this._busyDevices) {
+      this._fileContents = [...this._busyDevices.values()];
+      this._busyDevices = null;
+    }
   }
 }
 

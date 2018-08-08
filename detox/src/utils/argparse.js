@@ -24,7 +24,7 @@ function getFlag(key) {
   return false;
 }
 
-function createTransformFunction({ prefix = '--', kebab = true }) {
+function createTransformFunction({ prefix = '--', kebab = false }) {
   const addPrefix = typeof prefix === 'string' ? s => prefix + s : _.identity;
   const convertKebab = kebab ? _.kebabCase : _.identity;
 

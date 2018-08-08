@@ -6,7 +6,7 @@ const IosDriver = require('./IosDriver');
 const AppleSimUtils = require('../ios/AppleSimUtils');
 const configuration = require('../../configuration');
 const environment = require('../../utils/environment');
-const DeviceRegistry = require('../DeviceRegistry');
+const SimulatorDeviceRegistry = require('../registries/SimulatorDeviceRegistry');
 const DetoxRuntimeError = require('../../errors/DetoxRuntimeError');
 const log = require('../../utils/logger').child({ __filename });
 
@@ -19,34 +19,7 @@ class SimulatorDriver extends IosDriver {
   constructor(config) {
     super(config);
     this._applesimutils = new AppleSimUtils();
-
-    this.deviceRegistry = new DeviceRegistry({
-      createDeviceWithProperties: this._createDeviceWithProperties.bind(this),
-      getDevicesWithProperties: this._getDevicesWithProperties.bind(this),
-    });
-  }
-
-  async _createDeviceWithProperties(properties) {
-    const device = await this._applesimutils.getDevicesWithProperties(properties);
-    return SimulatorDriver.remapSimUtilsObject(device);
-  }
-
-  async _getDevicesWithProperties(properties) {
-    const devices = await this._applesimutils.getDevicesWithProperties(properties);
-    return devices.map(SimulatorDriver.remapSimUtilsObject);
-  }
-
-  async _createDeviceWithProperties(properties) {
-    const devices = await this._applesimutils.getDevicesWithProperties(properties);
-    return devices.map(SimulatorDriver.remapSimUtilsObject);
-  }
-
-  static remapSimUtilsObject(device) {
-    return _.mapKeys(device, SimulatorDriver.renameUDID);
-  }
-
-  static renameUDID(_value, key) {
-    return key === 'udid' ? 'id' : key;
+    this.deviceRegistry = new SimulatorDeviceRegistry(this._applesimutils);
   }
 
   declareArtifactPlugins() {

@@ -64,15 +64,7 @@ Array [
 exports[`AppleSimUtils create calls xcrun to get a list of runtimes/devicetypes/devices 1`] = `
 Array [
   Array [
-    "/usr/bin/xcrun simctl list -j",
-    Object {
-      "silent": false,
-    },
-    Object {},
-    1,
-  ],
-  Array [
-    "/usr/bin/xcrun simctl create \\"iPhone X-Detox\\" \\"com.apple.CoreSimulator.SimDeviceType.iPhone-X\\" \\"com.apple.CoreSimulator.SimRuntime.iOS-11-3\\"",
+    "/usr/bin/xcrun simctl create \\"iPhone X\\" \\"com.apple.CoreSimulator.SimDeviceType.iPhone-X\\" \\"com.apple.CoreSimulator.SimRuntime.iOS-11-3\\"",
     Object {
       "silent": false,
     },
@@ -82,18 +74,15 @@ Array [
 ]
 `;
 
-exports[`AppleSimUtils findDeviceUDID adapted to new api with optional OS 1`] = `
+exports[`AppleSimUtils create throw if did not get something similar to guid 1`] = `
 Array [
   Array [
-    "applesimutils",
+    "/usr/bin/xcrun simctl create \\"iPhone X\\" \\"com.apple.CoreSimulator.SimDeviceType.iPhone-X\\" \\"com.apple.CoreSimulator.SimRuntime.iOS-11-3\\"",
     Object {
-      "args": "--list --byType \\"iPhone 6\\" --byOS \\"iOS 10.3\\"",
+      "silent": false,
     },
-    Object {
-      "trying": "Searching for device matching iPhone 6 , iOS 10.3...",
-    },
+    Object {},
     1,
-    undefined,
   ],
 ]
 `;

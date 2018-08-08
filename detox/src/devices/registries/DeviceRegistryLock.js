@@ -1,7 +1,7 @@
 const fs = require('fs-extra');
 const plockfile = require('proper-lockfile');
-const retry = require('../utils/retry');
-const environment = require('../utils/environment');
+const retry = require('../../utils/retry');
+const environment = require('../../utils/environment');
 
 class DeviceRegistryLock {
   constructor({
@@ -21,16 +21,25 @@ class DeviceRegistryLock {
     return this._busyDevices;
   }
 
+  /***
+   * Locks the lock file and reads the state from it.
+   * If the lock file did not exist, it is created with an empty state.
+   */
   async lock() {
     await this._createEmptyLockFileIfItDoesNotExist();
     await retry(this._lockRetryOptions, () => plockfile.lock(this._lockFilePath));
     await this._readBusyDevicesFromLockFile();
   }
 
+  /***
+   * Writes changes to the lock file and unlocks it
+   */
   async unlock() {
-    await this._writeBusyDevicesToLockFile();
-    this._busyDevices = null;
-    await plockfile.unlockSync(this._lockFilePath);
+    if (this._busyDevices) {
+      await this._writeBusyDevicesToLockFile();
+      this._busyDevices = null;
+      await plockfile.unlock(this._lockFilePath);
+    }
   }
 
   async _createEmptyLockFileIfItDoesNotExist() {
