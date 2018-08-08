@@ -17,6 +17,21 @@ class SimulatorDeviceRegistry extends DeviceRegistry {
     return this._applesimutils.getDevicesWithProperties(deviceProperties);
   }
 
+  async acquireDevice(devicePropertiesOrName) {
+    const deviceProperties = typeof devicePropertiesOrName === 'string'
+      ? this._convertToDeviceProperties(devicePropertiesOrName)
+      : devicePropertiesOrName;
+
+    return super.acquireDevice(deviceProperties);
+  }
+
+  _convertToDeviceProperties(deviceName) {
+    const [name, version] = deviceName.split(',').map(s => s.trim());
+    const osInfo = version ? { os: { version } } : null;
+
+    return { name, ...osInfo };
+  }
+
   getRuntimeVersion(deviceProperties) {
     const version = _.get(deviceProperties, ['os', 'version'], '0');
     const [major, minor = '00', patch = '00'] = version.split('.').map(pad2);

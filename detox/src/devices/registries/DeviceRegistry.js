@@ -34,11 +34,11 @@ class DeviceRegistry {
    */
   getRuntimeVersion(deviceProperties) {}
 
-  async acquireDevice(deviceName) {
+  async acquireDevice(deviceProperties) {
     await this._deviceRegistryLock.lock();
 
     try {
-      const exactMatch = await this._findExactDevice({ name: deviceName });
+      const exactMatch = await this._findExactDevice(deviceProperties);
       const similarMatch = exactMatch.available ? exactMatch : await this._findSimilarDevice(exactMatch.latest);
       const device = similarMatch.available || await this._createSimilarDevice(exactMatch.latest);
 
@@ -59,8 +59,8 @@ class DeviceRegistry {
     }
   }
 
-  async _findExactDevice(searchQuery) {
-    const match = await this._findDeviceByQuery(searchQuery);
+  async _findExactDevice(deviceProperties) {
+    const match = await this._findDeviceByQuery(deviceProperties);
 
     if (match.available) {
       const { name, udid } = match.available;

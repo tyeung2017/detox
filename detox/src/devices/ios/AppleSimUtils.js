@@ -8,59 +8,6 @@ const { composeArgs } = require('../../utils/argparse');
 const { isUUID } = require('../../utils/uuid');
 
 class AppleSimUtils {
-  async setPermissions(udid, bundleId, permissionsObj) {
-    const statusLogs = {
-      trying: `Trying to set permissions...`,
-      successful: 'Permissions are set'
-    };
-    let permissions = [];
-    _.forEach(permissionsObj, function (shouldAllow, permission) {
-      permissions.push(permission + '=' + shouldAllow);
-    });
-    await this._execAppleSimUtils({
-      args: `--simulator ${udid} --bundle ${bundleId} --setPermissions ${_.join(permissions, ',')}`
-    }, statusLogs, 1);
-  }
-
-  async getDevicesWithProperties(deviceProperties) {
-    const query = _.omitBy(
-      typeof deviceProperties === 'string'
-        ? this._parseStringQuery(deviceProperties)
-        : {
-          byId: _.get(deviceProperties, 'udid'),
-          byName: _.get(deviceProperties, 'name'),
-          byType: _.get(deviceProperties, ['deviceType', 'name']),
-          byOS: _.get(deviceProperties, ['os', 'version']),
-        },
-      _.isUndefined
-    );
-
-    log.debug({ event: 'SEARCH_DEVICES' }, `Searching for device matching query: ${util.inspect(query)}...`);
-
-    const args = `--list ${composeArgs(query)}`;
-    const responseFromAppleSimUtils = await this._execAppleSimUtils({ args }, undefined, 1);
-    const foundDevices = this._parseResponseFromAppleSimUtils(responseFromAppleSimUtils);
-
-    if (_.isEmpty(foundDevices)) {
-      throw new DetoxRuntimeError({
-        message: `Can't find a simulator to match query: ${util.inspect(query)}.\nRun 'xcrun simctl list' to list your supported devices.`,
-        hint: `It is advised to only state a device type, and not to state iOS version, e.g. "iPhone 7"`,
-        debugInfo: `Debug info. Ran: applesimutils ${args}\nOutput:\n${responseFromAppleSimUtils}`,
-      });
-    }
-
-    return foundDevices;
-  }
-
-  _parseStringQuery(query) {
-    const [byType, byOS] = query.split(',').map(s => s.trim());
-
-    return {
-      byType,
-      byOS,
-    };
-  }
-
   /***
    * Boots the simulator if it is not booted already.
    *
@@ -98,6 +45,50 @@ class AppleSimUtils {
     }
 
     return udid;
+  }
+
+  async getDevicesWithProperties(deviceProperties) {
+    const query = _.omitBy(
+      typeof deviceProperties === 'string'
+        ? this._parseStringQuery(deviceProperties)
+        : {
+          byId: _.get(deviceProperties, 'udid'),
+          byName: _.get(deviceProperties, 'name'),
+          byType: _.get(deviceProperties, ['deviceType', 'name']),
+          byOS: _.get(deviceProperties, ['os', 'version']),
+        },
+      _.isUndefined
+    );
+
+    log.debug({ event: 'SEARCH_DEVICES' }, `Searching for device matching query: ${util.inspect(query)}...`);
+
+    const args = `--list ${composeArgs(query)}`;
+    const responseFromAppleSimUtils = await this._execAppleSimUtils({ args }, undefined, 1);
+    const foundDevices = this._parseResponseFromAppleSimUtils(responseFromAppleSimUtils);
+
+    if (_.isEmpty(foundDevices)) {
+      throw new DetoxRuntimeError({
+        message: `Can't find a simulator to match query: ${util.inspect(query)}.\nRun 'xcrun simctl list' to list your supported devices.`,
+        hint: `It is advised to only state a device type, and not to state iOS version, e.g. "iPhone 7"`,
+        debugInfo: `Debug info. Ran: applesimutils ${args}\nOutput:\n${responseFromAppleSimUtils}`,
+      });
+    }
+
+    return foundDevices;
+  }
+
+  async setPermissions(udid, bundleId, permissionsObj) {
+    const statusLogs = {
+      trying: `Trying to set permissions...`,
+      successful: 'Permissions are set'
+    };
+    let permissions = [];
+    _.forEach(permissionsObj, function (shouldAllow, permission) {
+      permissions.push(permission + '=' + shouldAllow);
+    });
+    await this._execAppleSimUtils({
+      args: `--simulator ${udid} --bundle ${bundleId} --setPermissions ${_.join(permissions, ',')}`
+    }, statusLogs, 1);
   }
 
   async install(udid, absPath) {

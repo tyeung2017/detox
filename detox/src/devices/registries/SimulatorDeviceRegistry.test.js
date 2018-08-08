@@ -14,6 +14,30 @@ describe('SimulatorDeviceRegistry', () => {
     registry = new SimulatorDeviceRegistry(fakeAppleSimUtils);
   });
 
+  describe('acquireDevice', () => {
+    it('should convert string to { name }', async () => {
+      await registry.acquireDevice('iPhone X').catch(() => {});
+      expect(fakeAppleSimUtils.getDevicesWithProperties).toHaveBeenCalledWith({ name: 'iPhone X' });
+    });
+
+    it('should convert string,string to { name, os: { version } }', async () => {
+      await registry.acquireDevice('iPhone X, iOS 11.4').catch(() => {});
+
+      expect(fakeAppleSimUtils.getDevicesWithProperties).toHaveBeenCalledWith({
+        name: 'iPhone X',
+        os: { version: 'iOS 11.4' }
+      });
+    });
+
+    it('should pass through the given objects', async () => {
+      await registry.acquireDevice({ udid: '240C26E6-FE33-41A3-8EF0-7858DA2F53B6' }).catch(() => {});
+
+      expect(fakeAppleSimUtils.getDevicesWithProperties).toHaveBeenCalledWith({
+        udid: '240C26E6-FE33-41A3-8EF0-7858DA2F53B6'
+      });
+    });
+  });
+
   describe('createDeviceWithProperties', () => {
     it('should call apple sim utils: .create()', async () => {
       const params = {};
