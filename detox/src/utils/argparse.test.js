@@ -78,9 +78,13 @@ describe('argparse', () => {
       expect(composeArgs({ byId: 100 })).toBe('--byId 100');
     });
 
-    it('should convert { byId: 100 } to "--by-id 100" if kebab case is turned on', () => {
+    it('should convert camelcase to kebab case, if turned on', () => {
       const options = { kebab: true };
       expect(composeArgs({ byId: 100 }, options)).toBe('--by-id 100');
+    });
+
+    it('should quote-escape values with spaces inside', () => {
+      expect(composeArgs({ query: "equals \"iPhone X\"" })).toBe('--query "equals \\\"iPhone X\\\""');
     });
 
     it('should convert { enabled: true } to "--enabled" because it is boolean', () => {
