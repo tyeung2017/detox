@@ -1,39 +1,34 @@
+jest.mock('../ios/AppleSimUtils');
 const _ = require('lodash');
 const SimulatorDeviceRegistry = require('./SimulatorDeviceRegistry');
 
 describe('SimulatorDeviceRegistry', () => {
-  let fakeAppleSimUtils;
+  let applesimutils;
   let registry;
 
   beforeEach(() => {
-    fakeAppleSimUtils = {
-      create: jest.fn(),
-      getDevicesWithProperties: jest.fn(),
-    };
+    const AppleSimUtils = require('../ios/AppleSimUtils');
+    applesimutils = new AppleSimUtils();
 
-    registry = new SimulatorDeviceRegistry(fakeAppleSimUtils);
+    registry = new SimulatorDeviceRegistry(applesimutils);
   });
 
-  describe('acquireDevice', () => {
+  describe('acquireDeviceWithName', () => {
+    beforeEach(() => {
+      registry.acquireDevice = jest.fn();
+    });
+
     it('should convert string to { name }', async () => {
-      await registry.acquireDevice('iPhone X').catch(() => {});
-      expect(fakeAppleSimUtils.getDevicesWithProperties).toHaveBeenCalledWith({ name: 'iPhone X' });
+      await registry.acquireDeviceWithName('iPhone X');
+      expect(registry.acquireDevice).toHaveBeenCalledWith({ name: 'iPhone X' });
     });
 
     it('should convert string,string to { name, os: { version } }', async () => {
-      await registry.acquireDevice('iPhone X, iOS 11.4').catch(() => {});
+      await registry.acquireDeviceWithName('iPhone X, iOS 11.4');
 
-      expect(fakeAppleSimUtils.getDevicesWithProperties).toHaveBeenCalledWith({
-        name: 'iPhone X',
+      expect(registry.acquireDevice).toHaveBeenCalledWith({
+        deviceType: { name: 'iPhone X' },
         os: { version: 'iOS 11.4' }
-      });
-    });
-
-    it('should pass through the given objects', async () => {
-      await registry.acquireDevice({ udid: '240C26E6-FE33-41A3-8EF0-7858DA2F53B6' }).catch(() => {});
-
-      expect(fakeAppleSimUtils.getDevicesWithProperties).toHaveBeenCalledWith({
-        udid: '240C26E6-FE33-41A3-8EF0-7858DA2F53B6'
       });
     });
   });
@@ -42,17 +37,17 @@ describe('SimulatorDeviceRegistry', () => {
     it('should call apple sim utils: .create()', async () => {
       const params = {};
 
-      fakeAppleSimUtils.create.mockReturnValue("UDID");
+      applesimutils.createDeviceWithProperties.mockReturnValue("UDID");
       expect(await registry.createDeviceWithProperties(params)).toBe("UDID");
-      expect(fakeAppleSimUtils.create).toHaveBeenCalledWith(params);
+      expect(applesimutils.createDeviceWithProperties).toHaveBeenCalledWith(params);
     });
 
     it('should call apple sim utils: .getDevicesWithProperties()', async () => {
       const params = {};
 
-      fakeAppleSimUtils.getDevicesWithProperties.mockReturnValue(['test']);
+      applesimutils.getDevicesWithProperties.mockReturnValue(['test']);
       expect(await registry.getDevicesWithProperties(params)).toEqual(['test']);
-      expect(fakeAppleSimUtils.getDevicesWithProperties).toHaveBeenCalledWith(params);
+      expect(applesimutils.getDevicesWithProperties).toHaveBeenCalledWith(params);
     });
   });
 

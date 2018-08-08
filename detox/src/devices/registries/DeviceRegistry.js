@@ -35,6 +35,7 @@ class DeviceRegistry {
   getRuntimeVersion(deviceProperties) {}
 
   async acquireDevice(deviceProperties) {
+    log.trace({ event: 'ACQUIRING_DEVICE' }, 'acquiring device with properties', deviceProperties);
     await this._deviceRegistryLock.lock();
 
     try {

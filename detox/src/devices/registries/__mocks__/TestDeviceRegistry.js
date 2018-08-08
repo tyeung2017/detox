@@ -6,16 +6,12 @@ class TestDeviceRegistry extends DeviceRegistry {
     createDeviceWithProperties,
     getDevicesWithProperties,
     getRuntimeVersion,
-  }) {
+  } = {}) {
     super({ deviceRegistryLock });
 
     this.createDeviceWithProperties = createDeviceWithProperties;
     this.getDevicesWithProperties = getDevicesWithProperties;
     this.getRuntimeVersion = getRuntimeVersion;
-  }
-
-  async acquireDevice(deviceName) {
-    return super.acquireDevice({ name: deviceName });
   }
 }
 

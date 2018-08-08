@@ -48,17 +48,12 @@ class AppleSimUtils {
   }
 
   async getDevicesWithProperties(deviceProperties) {
-    const query = _.omitBy(
-      typeof deviceProperties === 'string'
-        ? this._parseStringQuery(deviceProperties)
-        : {
-          byId: _.get(deviceProperties, 'udid'),
-          byName: _.get(deviceProperties, 'name'),
-          byType: _.get(deviceProperties, ['deviceType', 'name']),
-          byOS: _.get(deviceProperties, ['os', 'version']),
-        },
-      _.isUndefined
-    );
+    const query = _.omitBy({
+      byId: _.get(deviceProperties, 'udid'),
+      byName: _.get(deviceProperties, 'name'),
+      byType: _.get(deviceProperties, ['deviceType', 'name']),
+      byOS: _.get(deviceProperties, ['os', 'version']),
+    }, _.isUndefined);
 
     log.debug({ event: 'SEARCH_DEVICES' }, `Searching for device matching query: ${util.inspect(query)}...`);
 
@@ -68,9 +63,8 @@ class AppleSimUtils {
 
     if (_.isEmpty(foundDevices)) {
       throw new DetoxRuntimeError({
-        message: `Can't find a simulator to match query: ${util.inspect(query)}.\nRun 'xcrun simctl list' to list your supported devices.`,
-        hint: `It is advised to only state a device type, and not to state iOS version, e.g. "iPhone 7"`,
-        debugInfo: `Debug info. Ran: applesimutils ${args}\nOutput:\n${responseFromAppleSimUtils}`,
+        message: `Can't find a simulator from output of: applesimutils ${args}`,
+        hint: `To see available devices, try to run: applesimutils --list | grep ^.....name`,
       });
     }
 

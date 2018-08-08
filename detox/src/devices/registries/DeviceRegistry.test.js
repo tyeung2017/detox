@@ -34,9 +34,13 @@ describe('DeviceRegistry', () => {
     return { udid, name, type, version };
   }
 
+  async function acquireDevice(name) {
+    return deviceRegistry.acquireDevice({ name });
+  }
+
   it('should have a real device registry lock implementation by default', async () => {
-    const registry = new TestDeviceRegistry({});
-    await registry.freeDevice('iPhone X');
+    const registry = new TestDeviceRegistry();
+    await registry.freeDevice('1');
   });
 
   describe(`acquireDevice`, () => {
@@ -46,11 +50,11 @@ describe('DeviceRegistry', () => {
       });
 
       it('should throw if device with given name is not found', async () => {
-        await expect(deviceRegistry.acquireDevice('iPhone X')).rejects.toThrowErrorMatchingSnapshot();
+        await expect(acquireDevice('iPhone X')).rejects.toThrowErrorMatchingSnapshot();
       });
 
       it('should always unlock the registry, even after the exception', async () => {
-        await expect(deviceRegistry.acquireDevice('iPhone X')).rejects.toThrow();
+        await expect(acquireDevice('iPhone X')).rejects.toThrow();
 
         expect(deviceRegistryLock.lock).toHaveBeenCalled();
         expect(deviceRegistryLock.unlock).toHaveBeenCalled();
@@ -64,7 +68,7 @@ describe('DeviceRegistry', () => {
       });
 
       it('should return its id', async () => {
-        expect(await deviceRegistry.acquireDevice('Kuche')).toBe('1');
+        expect(await acquireDevice('Kuche')).toBe('1');
         expect(getDevicesWithProperties).toHaveBeenCalledWith({
           name: 'Kuche',
         });
@@ -72,11 +76,11 @@ describe('DeviceRegistry', () => {
 
       describe('but it is already busy', () => {
         beforeEach(async () => {
-          await deviceRegistry.acquireDevice('Kuche');
+          await acquireDevice('Kuche');
         });
 
         it('should take a similar available device', async () => {
-          expect(await deviceRegistry.acquireDevice('Kuche')).toBe('2');
+          expect(await acquireDevice('Kuche')).toBe('2');
           expect(getDevicesWithProperties).toHaveBeenCalledWith({
             type: 'iPhone X',
             version: '11.4',
@@ -85,12 +89,11 @@ describe('DeviceRegistry', () => {
 
         describe('and there are no similar devices', () => {
           beforeEach(async () => {
-            await deviceRegistry.acquireDevice('Dog');
+            await acquireDevice('Dog');
           });
 
           it('should create a similar device', async () => {
-            debugger;
-            expect(await deviceRegistry.acquireDevice('Kuche')).toBe('createdDevice_1');
+            expect(await acquireDevice('Kuche')).toBe('createdDevice_1');
 
             expect(createDeviceWithProperties).toHaveBeenCalledWith({
               name: 'Kuche-Detox',
@@ -109,14 +112,14 @@ describe('DeviceRegistry', () => {
       });
 
       it('should take the latest one', async () => {
-        expect(await deviceRegistry.acquireDevice('iPhone X')).toBe('2');
+        expect(await acquireDevice('iPhone X')).toBe('2');
       });
 
       describe('when it is requested for the second time', () => {
-        beforeEach(async () => await deviceRegistry.acquireDevice('iPhone X'));
+        beforeEach(async () => await acquireDevice('iPhone X'));
 
         it('should create a new device with the latest version (because a free existing one has an older version)', async () => {
-          const secondDeviceId = await deviceRegistry.acquireDevice('iPhone X');
+          const secondDeviceId = await acquireDevice('iPhone X');
 
           expect(secondDeviceId).toBe('createdDevice_1');
           expect(createDeviceWithProperties).toHaveBeenCalledWith({
@@ -135,9 +138,9 @@ describe('DeviceRegistry', () => {
     });
 
     it('should free device', async () => {
-      expect(await deviceRegistry.acquireDevice('DETOX')).toBe('1');
+      expect(await acquireDevice('DETOX')).toBe('1');
       await deviceRegistry.freeDevice('1');
-      expect(await deviceRegistry.acquireDevice('DETOX')).toBe('1');
+      expect(await acquireDevice('DETOX')).toBe('1');
     });
 
     it('should not throw if called against a free device', async () => {
