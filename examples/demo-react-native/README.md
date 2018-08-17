@@ -52,3 +52,5 @@
  detox test --configuration ios.sim.debug
  ```
  This action will open a new simulator and run the tests on it.
+
+testing push
